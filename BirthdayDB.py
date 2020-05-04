@@ -13,23 +13,41 @@ root.rowconfigure(0, weight=1)
 new_birthday=Toplevel()
 new_birthday.geometry("600x600")
 
+
+
+
+display_birthdays=Toplevel()
+display_birthdays.geometry("500x500")
+display_birthdays.columnconfigure(0, weight=1)   # Set weight to row and 
+display_birthdays.rowconfigure(0, weight=1)
+
+
+
+
+
+
+root_bgimage=ImageTk.PhotoImage(Image.open("backgroundImages/birthday_bg.png"))
+root_bglabel=Label(root, image=root_bgimage)
+root_bglabel.place(x=0, y=0, relwidth=1, relheight=1)
+
 addbirthday_bgimage=ImageTk.PhotoImage(Image.open("backgroundImages/addbirthday_bg.png"))
 addbirthday_bglabel=Label(new_birthday, image=addbirthday_bgimage)
 addbirthday_bglabel.place(x=0, y=0, relwidth=1, relheight=1)
+
+displaybirthdays_bgimage=ImageTk.PhotoImage(Image.open("backgroundImages/dropdown_bg1.png"))
+displaybirthdays_bglabel=Label(display_birthdays, image=displaybirthdays_bgimage)
+displaybirthdays_bglabel.place(x=0, y=0, relwidth=1, relheight=1)
+
+display_birthdays.withdraw()
+dropdown_container=tk.Frame(display_birthdays)
+dropdown_container.grid(row=0, column=0)  
+dropdown_container.config(bg="#9F5AEA")
 
 
 
 add_birthday_container=tk.Frame(new_birthday)
 add_birthday_container.config(bg="#005E6E")
 new_birthday.withdraw()
-
-root_bgimage=ImageTk.PhotoImage(Image.open("backgroundImages/birthday_bg.png"))
-root_bglabel=Label(root, image=root_bgimage)
-root_bglabel.place(x=0, y=0, relwidth=1, relheight=1)
-
-
-
-
 
 
 first_name=Entry(add_birthday_container,width=15)
@@ -48,6 +66,11 @@ style = Style()
 style.configure('W.TButton', font =
                ('futura', 14, 'bold',), 
                 foreground = 'black') 
+
+months={1:"January",2:"February",3:"March",4:"April",5:"May",6:"June",7:"July",
+8:"August",9:"September",10:"October",11:"November",12:"December"}
+months_dropdown=['January','February','March','April','May','June','July','August','September','October','November','December']
+
 
 def submit_birthday():
 	global first_name
@@ -147,28 +170,64 @@ def add_birthday():
 def retrieve_birthday():
 	return
 
-def retrieve_all_birthday():
+def display_birthdays_in_month(dropdown_clicked):
+	global display_birthdays
+	#birthday_text=""
+	#birthday_label=Label(dropdown_container,text=birthday_text,width=50,style='W.TButton')
+	#birthday_label.grid(row=1, column=0, columnspan=3, padx=20,pady=10)
+
+	for label in dropdown_container.grid_slaves():
+		if int(label.grid_info()["row"]) > 0:
+			label.grid_forget()
+
+	
+	row=1
 	conn=sqlite3.connect('birthday.db')
 	cursor=conn.cursor()
-	row=0
 
-	cursor.execute(" SELECT * FROM birthdays ")
+	dropdown_month=months_dropdown.index(dropdown_clicked)+1
+	print(dropdown_month,"SELECTED DROPDOWN MONTH")
+	cursor.execute(" SELECT * FROM birthdays where month_of_birth=? ORDER BY day_of_birth ASC",(dropdown_month,))
 	records=cursor.fetchall()
 
-	display_birthdays=Toplevel()
-	display_birthdays.geometry("600x600")
-	
-	for birthday in records:
-		person=f"{birthday[0]} {birthday[1]}:  "
-		person_birthday=f"{birthday[2]}/{birthday[3]}/{birthday[4]}"
-		birthday_text=person+person_birthday
-		birthday_label=Label(display_birthdays,text=birthday_text,width=30,style='W.TButton')
-		birthday_label.grid(row=row, column=0, columnspan=3, padx=20)
-		row+=1
+	if(len(records)==0):
+		birthday_text="No birthdays found"
+		birthday_label=Label(dropdown_container,text=birthday_text,width=40,style='W.TButton')
+		birthday_label.grid(row=1, column=0, columnspan=3, padx=20,pady=10)
 
+	else:
+		birthday_text=""
+		for birthday in records:
+			person=f"{birthday[0]} {birthday[1]}:  "
+			person_birthday=f"{months[birthday[3]]} {birthday[2]}"
+			birthday_text+=person+person_birthday+'\n'
 
+		#birthday_label.grid_forget()	
+		birthday_label=Label(dropdown_container,text=birthday_text,width=40,style='W.TButton')
+		birthday_label.grid(row=1, column=0, columnspan=3, padx=20,pady=10)
 
 	conn.close()
+
+
+
+def retrieve_birthday_by_month():
+	# Add a drop down to select the month
+	global birthday_month_container
+	global display_birthdays
+	global months_dropdown
+
+	display_birthdays.deiconify()
+
+	dropdown_clicked=StringVar()
+	#dropdown_clicked.set("October")
+
+	dropdown=OptionMenu(dropdown_container,dropdown_clicked,months_dropdown[9],*months_dropdown)
+	dropdown.grid(row=0,column=0,columnspan=2,padx=20,pady=20)
+
+	search_btn=Button(dropdown_container,text="Search",style='W.TButton',command=lambda:display_birthdays_in_month(dropdown_clicked.get()))
+	search_btn.grid(row=0,column=2,padx=10,pady=10)
+
+	
 
 
 
@@ -187,7 +246,7 @@ add_birthday.grid(row=0,column=1, columnspan=3,padx=20,pady=10)
 retrieve_birthday=Button(main_container,text="Retrieve this week's birthdays",style='W.TButton',command=retrieve_birthday)
 retrieve_birthday.grid(row=1,column=1, columnspan=3,padx=20,pady=10)
 
-retrieve_all_birthday=Button(main_container,text="Get all birthdays",style='W.TButton',command=retrieve_all_birthday)
+retrieve_all_birthday=Button(main_container,text="Get all birthdays",style='W.TButton',command=retrieve_birthday_by_month)
 retrieve_all_birthday.grid(row=2,column=1, columnspan=3,padx=20,pady=10)
 
 quit_btn=Button(main_container,text="Destroy everthing",style='W.TButton', command=destroy)
